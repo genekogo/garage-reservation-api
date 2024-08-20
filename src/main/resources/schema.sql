@@ -43,9 +43,9 @@ CREATE TABLE garage_non_working_days (
 -- Create the garage_operations table
 -- Defines different types of operations the garage performs
 CREATE TABLE garage_operations (
-    id INT PRIMARY KEY AUTO_INCREMENT,  -- Unique identifier for each operation type
-    operation_name VARCHAR(100) NOT NULL UNIQUE,  -- Name of the operation (e.g., 'General Check', 'Tire Replacement')
-    duration_in_hours DECIMAL(4, 2) NOT NULL  -- Duration of the operation in hours (e.g., 3.00 for General Check)
+    id INT PRIMARY KEY AUTO_INCREMENT,  -- Unique identifier for each operation
+    name VARCHAR(100) NOT NULL,  -- Name of the operation
+    duration_in_minutes INT NOT NULL  -- Duration of the operation in minutes
 );
 
 -- Create the recurrence_patterns table
@@ -68,4 +68,28 @@ CREATE TABLE employee_time_offs (
     reason VARCHAR(255) NOT NULL,  -- Reason for the time off (e.g., 'Vacation', 'Sick Leave')
     FOREIGN KEY (employee_id) REFERENCES employees(id),  -- Foreign key constraint
     FOREIGN KEY (recurrence_pattern_id) REFERENCES recurrence_patterns(id)  -- Foreign key constraint
+);
+
+-- Create the customers table
+-- Stores information about each customer
+CREATE TABLE customers (
+    id INT PRIMARY KEY AUTO_INCREMENT,  -- Unique identifier for each customer
+    name VARCHAR(100) NOT NULL,  -- Customer's name
+    phone_number VARCHAR(20) NOT NULL,  -- Customer's phone number (required)
+    email VARCHAR(100)  -- Customer's email address (optional)
+);
+
+-- Create the appointments table
+-- Manages reservation data for garage operations, including employee assignment and customer details
+CREATE TABLE appointments (
+    id INT PRIMARY KEY AUTO_INCREMENT,  -- Unique identifier for each appointment
+    employee_id INT NOT NULL,  -- Foreign key referencing employees table
+    operation_id INT NOT NULL,  -- Foreign key referencing garage_operations table
+    customer_id INT NOT NULL,  -- Foreign key referencing customers table
+    appointment_date DATE NOT NULL,  -- Date of the appointment
+    start_time TIME NOT NULL,  -- Start time of the appointment
+    end_time TIME NOT NULL,  -- End time of the appointment
+    FOREIGN KEY (employee_id) REFERENCES employees(id),  -- Foreign key constraint
+    FOREIGN KEY (operation_id) REFERENCES garage_operations(id),  -- Foreign key constraint
+    FOREIGN KEY (customer_id) REFERENCES customers(id)  -- Foreign key constraint
 );

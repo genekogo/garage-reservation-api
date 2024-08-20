@@ -19,6 +19,9 @@ public class GarageNonWorkingDay {
     @ManyToOne
     private GarageClosureType closureType;
 
+    @Column(name = "description")
     private String description;
+
+    @Column(name = "date")
     private LocalDate date;
 }

@@ -46,9 +46,9 @@ INSERT INTO garage_non_working_days (closure_type_id, description, date) VALUES 
 -- Insert sample data into garage_operations table
 -- Defines the types of operations with their durations
 
-INSERT INTO garage_operations (operation_name, duration_in_hours) VALUES ('General Check', 3.00);  -- 3 hours
-INSERT INTO garage_operations (operation_name, duration_in_hours) VALUES ('Tire Replacement', 1.00);  -- 1 hour
-INSERT INTO garage_operations (operation_name, duration_in_hours) VALUES ('Broken Lamp Change', 0.50);  -- 0.5 hours
+INSERT INTO garage_operations (name, duration_in_minutes) VALUES ('General Check', 180); -- 3 hours
+INSERT INTO garage_operations (name, duration_in_minutes) VALUES ('Tire Replacement', 60); -- 1 hour
+INSERT INTO garage_operations (name, duration_in_minutes) VALUES ('Broken Lamp Change', 30); -- 30 minutes
 
 -- Insert sample data into recurrence_patterns table
 INSERT INTO recurrence_patterns (pattern_name) VALUES ('None');
@@ -83,3 +83,10 @@ INSERT INTO employee_time_offs (employee_id, start_date, start_time, end_date, e
 VALUES (2, '2024-09-14', '11:00:00', '2024-09-14', '14:00:00', 1, 'Midday Appointment');  -- Partial day appointment
 INSERT INTO employee_time_offs (employee_id, start_date, start_time, end_date, end_time, recurrence_pattern_id, reason)
 VALUES (2, '2024-09-01', '14:00:00', '2024-10-01', '16:00:00', 3, 'Weekly Medical Appointment');  -- Extended weekly appointment
+
+-- Insert sample data into customers table
+INSERT INTO customers (name, phone_number, email) VALUES ('John Doe', '123-456-7890', NULL);
+INSERT INTO customers (name, phone_number, email) VALUES ('Jane Smith', '234-567-8901', 'jane.smith@example.com');
+INSERT INTO customers (name, phone_number, email) VALUES ('Emily Johnson', '345-678-9012', NULL);
+INSERT INTO customers (name, phone_number, email) VALUES ('Michael Brown', '456-789-0123', 'michael.brown@example.com');
+INSERT INTO customers (name, phone_number, email) VALUES ('Linda Davis', '567-890-1234', NULL);

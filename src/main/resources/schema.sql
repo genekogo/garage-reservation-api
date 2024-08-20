@@ -40,6 +40,14 @@ CREATE TABLE garage_non_working_days (
     FOREIGN KEY (closure_type_id) REFERENCES garage_closure_types(id)  -- Foreign key constraint
 );
 
+-- Create the garage_operations table
+-- Defines different types of operations the garage performs
+CREATE TABLE garage_operations (
+    id INT PRIMARY KEY AUTO_INCREMENT,  -- Unique identifier for each operation type
+    operation_name VARCHAR(100) NOT NULL UNIQUE,  -- Name of the operation (e.g., 'General Check', 'Tire Replacement')
+    duration_in_hours DECIMAL(4, 2) NOT NULL  -- Duration of the operation in hours (e.g., 3.00 for General Check)
+);
+
 -- Create the recurrence_patterns table
 -- Defines patterns for recurring time off or events
 CREATE TABLE recurrence_patterns (

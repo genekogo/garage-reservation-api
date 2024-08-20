@@ -43,6 +43,13 @@ INSERT INTO garage_non_working_days (closure_type_id, description, date) VALUES 
 INSERT INTO garage_non_working_days (closure_type_id, description, date) VALUES (6, 'Flooding - Emergency Closure', '2024-08-25');
 INSERT INTO garage_non_working_days (closure_type_id, description, date) VALUES (7, 'End-of-Year Closure', '2024-12-30');
 
+-- Insert sample data into garage_operations table
+-- Defines the types of operations with their durations
+
+INSERT INTO garage_operations (operation_name, duration_in_hours) VALUES ('General Check', 3.00);  -- 3 hours
+INSERT INTO garage_operations (operation_name, duration_in_hours) VALUES ('Tire Replacement', 1.00);  -- 1 hour
+INSERT INTO garage_operations (operation_name, duration_in_hours) VALUES ('Broken Lamp Change', 0.50);  -- 0.5 hours
+
 -- Insert sample data into recurrence_patterns table
 INSERT INTO recurrence_patterns (pattern_name) VALUES ('None');
 INSERT INTO recurrence_patterns (pattern_name) VALUES ('Daily');

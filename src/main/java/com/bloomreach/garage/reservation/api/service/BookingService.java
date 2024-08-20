@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -24,6 +25,14 @@ public class BookingService {
     private final GarageOperationRepository operationRepository;
 
     public List<TimeSlot> findAvailableSlots(LocalDate date, Long operationId) {
+        // Validate input parameters
+        if (date == null) {
+            throw new IllegalArgumentException("Date cannot be null");
+        }
+        if (operationId == null || operationId <= 0) {
+            throw new IllegalArgumentException("Invalid operation ID");
+        }
+
         List<TimeSlot> availableSlots = new ArrayList<>();
 
         // Fetch garage working hours for the given date
@@ -44,41 +53,51 @@ public class BookingService {
         // Get the duration for the specified operation by ID in minutes
         int operationDurationInMinutes = getOperationDuration(operationId);
         if (operationDurationInMinutes == -1) {
-            throw new IllegalArgumentException("Invalid operation ID");
+            throw new IllegalArgumentException("Invalid operation id");
         }
 
-        LocalTime startTime = openingTime;
-
-        // Calculate available slots
-        while (startTime.plusMinutes(operationDurationInMinutes).isBefore(closingTime) || startTime.plusMinutes(operationDurationInMinutes).equals(closingTime)) {
-            boolean isSlotAvailable = true;
-            LocalTime slotEndTime = startTime.plusMinutes(operationDurationInMinutes);
-
-            for (Appointment appointment : existingAppointments) {
-                if ((startTime.isBefore(appointment.getEndTime()) && slotEndTime.isAfter(appointment.getStartTime())) ||
-                        (appointment.getStartTime().isBefore(slotEndTime) && appointment.getEndTime().isAfter(startTime))) {
-                    isSlotAvailable = false;
-                    break;
-                }
-            }
-
-            if (isSlotAvailable) {
-                availableSlots.add(new TimeSlot(startTime, slotEndTime));
-            }
-
-            // Increment by the operation duration to avoid overlapping with slots of the same duration
-            startTime = startTime.plusMinutes(operationDurationInMinutes);
-        }
+        // Generate available slots
+        availableSlots = generateAvailableSlots(openingTime, closingTime, existingAppointments, operationDurationInMinutes);
 
         return availableSlots;
     }
 
     private int getOperationDuration(Long operationId) {
         // Fetch the operation details from the repository using ID
-        GarageOperation operation = operationRepository.findById(operationId).orElse(null);
-        if (operation == null) {
-            return -1; // Indicates invalid operation
+        return operationRepository.findById(operationId)
+                .map(GarageOperation::getDurationInMinutes)
+                .orElse(-1);
+    }
+
+    private List<TimeSlot> generateAvailableSlots(LocalTime openingTime, LocalTime closingTime,
+                                                  List<Appointment> existingAppointments, int operationDurationInMinutes) {
+        List<TimeSlot> availableSlots = new ArrayList<>();
+        LocalTime startTime = openingTime;
+
+        // Sort appointments by start time for efficient overlap checking
+        existingAppointments.sort(Comparator.comparing(Appointment::getStartTime));
+
+        while (startTime.plusMinutes(operationDurationInMinutes).isBefore(closingTime) ||
+                startTime.plusMinutes(operationDurationInMinutes).equals(closingTime)) {
+            boolean isSlotAvailable = true;
+            LocalTime slotEndTime = startTime.plusMinutes(operationDurationInMinutes);
+
+            // Check if the current slot overlaps with any existing appointment
+            for (Appointment appointment : existingAppointments) {
+                if ((startTime.isBefore(appointment.getEndTime()) && slotEndTime.isAfter(appointment.getStartTime())) ||
+                        (appointment.getStartTime().isBefore(slotEndTime) && appointment.getEndTime().isAfter(startTime))) {
+                    isSlotAvailable = false;
+                    startTime = appointment.getEndTime(); // Skip to the end time of the conflicting appointment
+                    break;
+                }
+            }
+
+            if (isSlotAvailable) {
+                availableSlots.add(new TimeSlot(startTime, slotEndTime));
+                startTime = startTime.plusMinutes(operationDurationInMinutes); // Move to the next slot
+            }
         }
-        return operation.getDurationInMinutes();
+
+        return availableSlots;
     }
 }

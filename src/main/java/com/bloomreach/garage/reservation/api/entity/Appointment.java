@@ -17,14 +17,6 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "employee_id", nullable = false)
-    private Employee employee;
-
-    @ManyToOne
-    @JoinColumn(name = "operation_id", nullable = false)
-    private GarageOperation operation;
-
     @Column(name = "appointment_date", nullable = false)
     private LocalDate appointmentDate;
 
@@ -34,9 +26,15 @@ public class Appointment {
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 
-    @Column(name = "customer_name", nullable = false)
-    private String customerName;
+    @ManyToOne
+    @JoinColumn(name = "operation_id", nullable = false)
+    private GarageOperation operation;
 
-    @Column(name = "customer_contact")
-    private String customerContact;
+    @ManyToOne
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
+
+    @ManyToOne
+    @JoinColumn(name = "employee_id", nullable = false)
+    private Employee employee;
 }

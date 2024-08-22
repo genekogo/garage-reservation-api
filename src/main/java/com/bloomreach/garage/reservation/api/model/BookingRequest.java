@@ -5,17 +5,17 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
 public class BookingRequest {
 
+    private List<Long> operationIds;
+    private Long employeeId;
+    private Long customerId;
     private LocalDate date;
     private LocalTime startTime;
     private LocalTime endTime;
-    private Long operationId;
-    private Long customerId;
-    // TODO Do I need employee id?
-    private Long employeeId;
 }
 

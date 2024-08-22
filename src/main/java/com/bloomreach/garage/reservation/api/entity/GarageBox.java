@@ -1,19 +1,20 @@
 package com.bloomreach.garage.reservation.api.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "recurrence_patterns")
-public class RecurrencePattern {
+@Table(name = "garage_boxes")
+public class GarageBox {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "pattern_name")
-    private String patternName;
+    @NotBlank
+    private String name; // Name or identifier of the garage box
 }

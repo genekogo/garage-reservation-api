@@ -1,6 +1,7 @@
 package com.bloomreach.garage.reservation.api.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +15,6 @@ public class GarageClosureType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "type_name", nullable = false, unique = true)
-    private String typeName;
+    @NotBlank
+    private String name; // Type of closure (e.g., Public Holiday, Maintenance)
 }

@@ -1,6 +1,7 @@
 package com.bloomreach.garage.reservation.api.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -12,8 +13,8 @@ public class EmployeeType {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
-    @Column(name = "type_name", nullable = false, unique = true)
-    private String typeName;
+    @NotBlank
+    private String name; // Type of employee (e.g., Mechanic, Manager)
 }

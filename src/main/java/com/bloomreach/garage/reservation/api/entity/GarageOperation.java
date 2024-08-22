@@ -1,10 +1,10 @@
 package com.bloomreach.garage.reservation.api.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
@@ -16,9 +16,9 @@ public class GarageOperation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false, unique = true)
-    private String name;
+    @NotBlank
+    private String name; // Name of the operation (e.g., Tire Replacement)
 
-    @Column(name = "duration_in_minutes", nullable = false)
-    private Integer durationInMinutes;
+    @Positive
+    private int durationInMinutes; // Duration of the operation in minutes
 }

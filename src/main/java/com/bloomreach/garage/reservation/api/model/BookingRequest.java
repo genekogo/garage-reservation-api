@@ -12,7 +12,6 @@ import java.util.List;
 public class BookingRequest {
 
     private List<Long> operationIds;
-    private Long employeeId;
     private Long customerId;
     private LocalDate date;
     private LocalTime startTime;

@@ -1,8 +1,10 @@
 package com.bloomreach.garage.reservation.api.controller;
 
 import com.bloomreach.garage.reservation.api.model.BookingRequest;
+import com.bloomreach.garage.reservation.api.model.BookingResponse;
 import com.bloomreach.garage.reservation.api.model.TimeSlot;
-import com.bloomreach.garage.reservation.api.service.ReservationService;
+import com.bloomreach.garage.reservation.api.service.AvailabilityService;
+import com.bloomreach.garage.reservation.api.service.BookingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,7 +31,8 @@ import java.util.List;
 @Tag(name = "Reservation", description = "APIs for making reservations and checking availability")
 public class ReservationController {
 
-    private final ReservationService reservationService;
+    private final AvailabilityService availabilityService;
+    private final BookingService bookingService;
 
     /**
      * Gets available time slots for a specific date and list of operations.
@@ -45,10 +48,10 @@ public class ReservationController {
     public ResponseEntity<List<TimeSlot>> getAvailableSlots(@RequestParam("date") LocalDate date,
                                                             @RequestParam("operationIds") List<Long> operationIds) {
         try {
-            List<TimeSlot> availableSlots = reservationService.findAvailableSlots(date, operationIds);
+            List<TimeSlot> availableSlots = availabilityService.findAvailableSlots(date, operationIds);
             return ResponseEntity.ok(availableSlots);
-        } catch (Exception e) {
-            log.error(e.getMessage());
+        } catch (Exception exc) {
+            log.error("Error retrieving available slots: {}", exc.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
@@ -57,19 +60,19 @@ public class ReservationController {
      * Books appointments based on the provided booking request.
      *
      * @param bookingRequest The booking request containing details for the appointment.
-     * @return ResponseEntity indicating the result of the booking operation.
+     * @return ResponseEntity containing the booking details or error message.
      */
     @PostMapping("/book")
     @Operation(summary = "Book appointments", description = "Books appointments based on the provided details.")
     @ApiResponse(responseCode = "200", description = "Successfully booked the appointment")
     @ApiResponse(responseCode = "400", description = "Invalid request parameters")
-    public ResponseEntity<?> bookAppointments(@RequestBody BookingRequest bookingRequest) {
+    public ResponseEntity<BookingResponse> bookAppointments(@RequestBody BookingRequest bookingRequest) {
         try {
-            reservationService.bookAppointments(bookingRequest);
-            return ResponseEntity.ok("Appointment successfully booked");
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return ResponseEntity.badRequest().body("Failed to book appointment: " + e.getMessage());
+            BookingResponse bookingResponse = bookingService.bookAppointment(bookingRequest);
+            return ResponseEntity.ok(bookingResponse);
+        } catch (Exception exc) {
+            log.error("Error booking appointment: {}", exc.getMessage());
+            return ResponseEntity.badRequest().body(null); // You can customize this response based on requirements
         }
     }
 }

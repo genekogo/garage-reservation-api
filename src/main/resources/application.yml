@@ -21,7 +21,16 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  cache:
+    cache-names: availableSlots
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=10m
   h2:
     console:
       enabled: true
       path: /garage/h2-console
+
+garage:
+  reservation:
+    max-advance-days: 14  # Max days in advance to allow booking
+    min-advance-minutes: 30  # Min minutes in advance for the earliest possible slot

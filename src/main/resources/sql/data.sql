@@ -36,7 +36,6 @@ INSERT INTO employee_working_hours (employee_id, day_of_week, start_time, end_ti
 
 INSERT INTO garage_boxes (name) VALUES ('Box 1');
 INSERT INTO garage_boxes (name) VALUES ('Box 2');
-INSERT INTO garage_boxes (name) VALUES ('Box 3');
 
 -- **Garage Closure Types**
 

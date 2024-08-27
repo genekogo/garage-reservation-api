@@ -2,7 +2,7 @@ package com.bloomreach.garage.reservation.api.service;
 
 import com.bloomreach.garage.reservation.api.entity.EmployeeWorkingHours;
 import com.bloomreach.garage.reservation.api.entity.GarageOperation;
-import com.bloomreach.garage.reservation.api.model.TimeSlot;
+import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
 import com.bloomreach.garage.reservation.api.repository.EmployeeWorkingHoursRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageOperationRepository;
 import com.bloomreach.garage.reservation.config.ReservationProperties;
@@ -39,7 +39,7 @@ public class AvailabilityService {
      * @return A list of available time slots for the given date and operations.
      */
     @Cacheable(value = "availableSlots", key = "#date.toString()")
-    public List<TimeSlot> findAvailableSlots(LocalDate date, List<Long> operationIds) {
+    public List<AvailabilityResponse> findAvailableSlots(LocalDate date, List<Long> operationIds) {
         validateDate(date);  // Ensure the date is within the acceptable range
 
         // Fetch operations by their IDs
@@ -52,7 +52,7 @@ public class AvailabilityService {
         List<EmployeeWorkingHours> availableMechanics = employeeWorkingHoursRepository.findByDayOfWeek(date.getDayOfWeek());
 
         // Calculate time slots based on mechanics' availability and operations' durations
-        List<TimeSlot> availableSlots = new ArrayList<>();
+        List<AvailabilityResponse> availableSlots = new ArrayList<>();
         for (EmployeeWorkingHours workingHours : availableMechanics) {
             availableSlots.addAll(calculateTimeSlotsForMechanic(workingHours, operations));
         }
@@ -88,8 +88,8 @@ public class AvailabilityService {
      * @param operations   The list of operations to accommodate within the time slots.
      * @return A list of available time slots for the mechanic.
      */
-    private List<TimeSlot> calculateTimeSlotsForMechanic(EmployeeWorkingHours workingHours, List<GarageOperation> operations) {
-        List<TimeSlot> availableSlots = new ArrayList<>();
+    private List<AvailabilityResponse> calculateTimeSlotsForMechanic(EmployeeWorkingHours workingHours, List<GarageOperation> operations) {
+        List<AvailabilityResponse> availableSlots = new ArrayList<>();
         LocalTime start = workingHours.getStartTime();
         LocalTime end = workingHours.getEndTime();
 
@@ -114,7 +114,7 @@ public class AvailabilityService {
             }
 
             if (canAccommodateAll) {
-                availableSlots.add(new TimeSlot(start, slotEnd));
+                availableSlots.add(new AvailabilityResponse(start, slotEnd));
             }
 
             start = start.plusMinutes(minDuration); // Move to the next slot

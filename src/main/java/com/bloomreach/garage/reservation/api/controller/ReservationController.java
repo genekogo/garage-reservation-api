@@ -2,7 +2,7 @@ package com.bloomreach.garage.reservation.api.controller;
 
 import com.bloomreach.garage.reservation.api.model.BookingRequest;
 import com.bloomreach.garage.reservation.api.model.BookingResponse;
-import com.bloomreach.garage.reservation.api.model.TimeSlot;
+import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
 import com.bloomreach.garage.reservation.api.service.AvailabilityService;
 import com.bloomreach.garage.reservation.api.service.BookingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,10 +45,10 @@ public class ReservationController {
     @Operation(summary = "Get available time slots", description = "Retrieves available time slots for a given date and list of operations.")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots")
     @ApiResponse(responseCode = "400", description = "Invalid request parameters")
-    public ResponseEntity<List<TimeSlot>> getAvailableSlots(@RequestParam("date") LocalDate date,
-                                                            @RequestParam("operationIds") List<Long> operationIds) {
+    public ResponseEntity<List<AvailabilityResponse>> getAvailableSlots(@RequestParam("date") LocalDate date,
+                                                                        @RequestParam("operationIds") List<Long> operationIds) {
         try {
-            List<TimeSlot> availableSlots = availabilityService.findAvailableSlots(date, operationIds);
+            List<AvailabilityResponse> availableSlots = availabilityService.findAvailableSlots(date, operationIds);
             return ResponseEntity.ok(availableSlots);
         } catch (Exception exc) {
             log.error("Error retrieving available slots: {}", exc.getMessage());

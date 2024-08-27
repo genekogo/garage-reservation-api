@@ -11,14 +11,7 @@ import java.util.Optional;
 @RepositoryRestResource(path = "employeeWorkingHours")
 public interface EmployeeWorkingHoursRepository extends JpaRepository<EmployeeWorkingHours, Long> {
 
-    /**
-     * Find working hours by employee and day of the week.
-     *
-     * @param employeeId The ID of the employee.
-     * @param dayOfWeek  The day of the week (e.g., "Monday", "Tuesday").
-     * @return Optional of working hours for the specified employee and day.
-     */
-    Optional<EmployeeWorkingHours> findByEmployeeIdAndDayOfWeek(Long employeeId, DayOfWeek dayOfWeek);
+    List<EmployeeWorkingHours> findByEmployeeId(Long employeeId);
 
     /**
      * Find working hours by day of the week.

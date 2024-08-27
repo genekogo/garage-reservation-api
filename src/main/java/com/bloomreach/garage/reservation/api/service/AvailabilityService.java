@@ -28,7 +28,7 @@ public class AvailabilityService {
      * @param operationIds The list of operation IDs for which to find available slots.
      * @return A list of available time slots.
      */
-    @Cacheable(value = "availableSlots", key = "#date.toString() + '-' + #operationIds.toString()")
+    @Cacheable(value = "availableSlots", key = "#date.toString()")
     public List<TimeSlot> findAvailableSlots(LocalDate date, List<Long> operationIds) {
         validateDate(date);
 

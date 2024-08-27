@@ -21,10 +21,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+/**
+ * Service for handling booking operations.
+ */
 @RequiredArgsConstructor
 @Service
 public class BookingService {
@@ -37,7 +45,7 @@ public class BookingService {
     private final CustomerRepository customerRepository;
 
     @Transactional
-    @CacheEvict(value = "availableSlots", key = "#request.date.toString() + '-' + #request.operationIds.toString()")
+    @CacheEvict(value = "availableSlots", key = "#request.date.toString()")
     public BookingResponse bookAppointment(BookingRequest request) {
         // Validate that the slot is available using AvailabilityService
         boolean slotAvailable = availabilityService.isMechanicAvailable(
@@ -72,32 +80,45 @@ public class BookingService {
         appointment.setEndTime(request.getEndTime());
         appointment.setGarageBox(garageBox);
 
-        // For each operation, assign it to the appointment and to an available mechanic
+        // Track assigned mechanics
+        Set<Employee> assignedMechanics = new HashSet<>();
+
+        // Track the current time in the appointment
+        AtomicReference<LocalTime> currentOperationStartTime = new AtomicReference<>(request.getStartTime());
+
+        // Find and assign mechanics to operations
         List<GarageAppointmentOperation> appointmentOperations = operations.stream()
                 .map(operation -> {
-                    // Find available mechanics for the operation
-                    List<EmployeeWorkingHours> availableMechanics = employeeWorkingHoursRepository.findByDayOfWeek(request.getDate().getDayOfWeek());
+                    // Calculate the end time for this operation
+                    Integer operationDuration = operation.getDurationInMinutes();
+                    LocalTime operationEndTime = currentOperationStartTime.get().plusMinutes(operationDuration);
+
+                    // Find available mechanics for the operation with its own time window
+                    List<Employee> availableMechanics = findAvailableMechanics(request.getDate(), currentOperationStartTime.get(), operationEndTime, assignedMechanics);
 
                     // Ensure unique selection of mechanics and operations
                     if (availableMechanics.isEmpty()) {
                         throw new IllegalArgumentException("No available mechanics for this operation");
                     }
 
-                    // Filter mechanics who are available during the appointment time
                     Employee assignedMechanic = availableMechanics.stream()
-                            .filter(workingHours ->
-                                    (workingHours.getStartTime().isBefore(request.getEndTime()) &&
-                                            workingHours.getEndTime().isAfter(request.getStartTime())))
-                            .map(EmployeeWorkingHours::getEmployee)
-                            .findFirst()
+                            .findFirst()  // Pick the first available mechanic
                             .orElseThrow(() -> new IllegalArgumentException("No available mechanics for this operation"));
 
-                    // Create and return the appointment operation
-                    return GarageAppointmentOperation.builder()
+                    // Create and return the appointment operation with appointment set
+                    GarageAppointmentOperation appointmentOperation = GarageAppointmentOperation.builder()
                             .appointment(appointment)
                             .operation(operation)
                             .employee(assignedMechanic)
                             .build();
+
+                    // Add the assigned mechanic to the set (even though they can be assigned multiple times, track their assignments)
+                    assignedMechanics.add(assignedMechanic);
+
+                    // Update the currentOperationStartTime to the end time of the current operation
+                    currentOperationStartTime.set(operationEndTime);
+
+                    return appointmentOperation;
                 })
                 .collect(Collectors.toList());
 
@@ -125,5 +146,62 @@ public class BookingService {
                                 .build())
                         .collect(Collectors.toList()))
                 .build();
+    }
+
+    /**
+     * Finds available mechanics for the given date and time, excluding those already assigned.
+     *
+     * @param date              The date of the appointment.
+     * @param startTime         The start time of the appointment.
+     * @param endTime           The end time of the appointment.
+     * @param assignedMechanics The set of mechanics already assigned.
+     * @return List of available mechanics.
+     */
+    private List<Employee> findAvailableMechanics(LocalDate date, LocalTime startTime, LocalTime endTime, Set<Employee> assignedMechanics) {
+        // Fetch all working hours for the day of the week
+        List<EmployeeWorkingHours> workingHoursList = employeeWorkingHoursRepository.findByDayOfWeek(date.getDayOfWeek());
+
+        // Create a map of employeeId to their working hours
+        Map<Long, List<EmployeeWorkingHours>> employeeWorkingHoursMap = workingHoursList.stream()
+                .collect(Collectors.groupingBy(workingHours -> workingHours.getEmployee().getId()));
+
+        // Find available mechanics based on appointment time, excluding those who are already assigned
+        return workingHoursList.stream()
+                .map(EmployeeWorkingHours::getEmployee)
+                .filter(employee -> {
+                    // Get the working hours for the employee
+                    List<EmployeeWorkingHours> employeeWorkingHours = employeeWorkingHoursMap.get(employee.getId());
+
+                    // If no working hours are found for the employee, they are not available
+                    if (employeeWorkingHours == null) {
+                        return false;
+                    }
+
+                    // Check if the employee is available in the given time slot
+                    return employeeWorkingHours.stream()
+                            .anyMatch(workingHours ->
+                                    workingHours.getStartTime().isBefore(endTime) &&
+                                            workingHours.getEndTime().isAfter(startTime));
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Finds mechanics who are already assigned to appointments during the given date and time.
+     *
+     * @param date      The date of the appointment.
+     * @param startTime The start time of the appointment.
+     * @param endTime   The end time of the appointment.
+     * @return Set of already assigned mechanics.
+     */
+    private Set<Employee> findAssignedMechanics(LocalDate date, LocalTime startTime, LocalTime endTime) {
+        // Fetch all appointments within the given time slot
+        List<GarageAppointment> appointments = garageAppointmentRepository.findByDateAndStartTimeBeforeAndEndTimeAfter(date, startTime, endTime);
+
+        // Collect all employees who are already assigned to appointments in the time slot
+        return appointments.stream()
+                .flatMap(appointment -> appointment.getOperations().stream())
+                .map(GarageAppointmentOperation::getEmployee)
+                .collect(Collectors.toSet());
     }
 }

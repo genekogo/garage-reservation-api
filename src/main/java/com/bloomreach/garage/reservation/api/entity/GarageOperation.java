@@ -20,5 +20,5 @@ public class GarageOperation {
     private String name; // Name of the operation (e.g., Tire Replacement)
 
     @Positive
-    private int durationInMinutes; // Duration of the operation in minutes
+    private Integer durationInMinutes; // Duration of the operation in minutes
 }

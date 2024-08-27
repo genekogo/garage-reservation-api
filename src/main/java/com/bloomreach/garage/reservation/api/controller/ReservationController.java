@@ -1,6 +1,7 @@
 package com.bloomreach.garage.reservation.api.controller;
 
-import com.bloomreach.garage.reservation.api.error.BadRequestError;
+import com.bloomreach.garage.reservation.api.error.ProcessingError;
+import com.bloomreach.garage.reservation.api.error.ValidationError;
 import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
 import com.bloomreach.garage.reservation.api.model.BookingRequest;
 import com.bloomreach.garage.reservation.api.model.BookingResponse;
@@ -49,8 +50,8 @@ public class ReservationController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots",
                     content = @Content(schema = @Schema(implementation = AvailabilityResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid request parameters",
-                    content = @Content(schema = @Schema(implementation = BadRequestError.class)))
+            @ApiResponse(responseCode = "400", description = "Validation error",
+                    content = @Content(schema = @Schema(implementation = ValidationError.class)))
     })
     public List<AvailabilityResponse> findAvailableSlots(@RequestParam LocalDate date,
                                                          @RequestParam List<Long> operationIds) {
@@ -68,8 +69,10 @@ public class ReservationController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots",
                     content = @Content(schema = @Schema(implementation = AvailabilityResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid request parameters",
-                    content = @Content(schema = @Schema(implementation = BadRequestError.class)))
+            @ApiResponse(responseCode = "400", description = "Validation error",
+                    content = @Content(schema = @Schema(implementation = ValidationError.class))),
+            @ApiResponse(responseCode = "400", description = "Processing error",
+                    content = @Content(schema = @Schema(implementation = ProcessingError.class)))
     })
     public BookingResponse bookAppointments(@RequestBody BookingRequest bookingRequest) {
         return bookingService.bookAppointment(bookingRequest);

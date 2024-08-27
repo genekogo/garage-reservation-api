@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
  * @see org.springframework.http.HttpStatus#BAD_REQUEST
  */
 @ResponseStatus(HttpStatus.BAD_REQUEST)
-public class BadRequestError extends RuntimeException {
+public class ProcessingError extends RuntimeException {
 
     /**
      * Constructs a new {@code ValidationError} with the specified detail message.
@@ -29,7 +29,7 @@ public class BadRequestError extends RuntimeException {
      *
      * @param message the detail message.
      */
-    public BadRequestError(String message) {
+    public ProcessingError(String message) {
         super(message);
     }
 }

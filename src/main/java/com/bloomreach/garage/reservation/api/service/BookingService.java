@@ -7,7 +7,9 @@ import com.bloomreach.garage.reservation.api.entity.GarageAppointment;
 import com.bloomreach.garage.reservation.api.entity.GarageAppointmentOperation;
 import com.bloomreach.garage.reservation.api.entity.GarageBox;
 import com.bloomreach.garage.reservation.api.entity.GarageOperation;
-import com.bloomreach.garage.reservation.api.error.BadRequestError;
+import com.bloomreach.garage.reservation.api.error.ErrorMessage;
+import com.bloomreach.garage.reservation.api.error.ProcessingError;
+import com.bloomreach.garage.reservation.api.error.ValidationError;
 import com.bloomreach.garage.reservation.api.model.BookingRequest;
 import com.bloomreach.garage.reservation.api.model.BookingResponse;
 import com.bloomreach.garage.reservation.api.repository.CustomerRepository;
@@ -16,6 +18,7 @@ import com.bloomreach.garage.reservation.api.repository.GarageAppointmentOperati
 import com.bloomreach.garage.reservation.api.repository.GarageAppointmentRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageBoxRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageOperationRepository;
+import com.bloomreach.garage.reservation.config.ReservationProperties;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -23,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -34,6 +38,7 @@ import java.util.stream.Collectors;
 @Service
 public class BookingService {
 
+    private final ReservationProperties reservationProperties;
     private final AvailabilityService availabilityService;
     private final GarageAppointmentRepository garageAppointmentRepository;
     private final GarageOperationRepository garageOperationRepository;
@@ -54,16 +59,20 @@ public class BookingService {
      *
      * @param request The booking request containing details of the appointment.
      * @return A response containing the booked appointment details.
-     * @throws BadRequestError if no mechanics, garage boxes, or operations are available.
+     * @throws ValidationError if date is not matches to the allowed time range.
+     * @throws ProcessingError if no mechanics, garage boxes, or operations are available.
      */
     @Transactional
     @CacheEvict(value = "availableSlots", key = "#request.date.toString()")
     public BookingResponse bookAppointment(BookingRequest request) {
+        // Validate the booking date and time against max-advance-days and min-advance-minutes
+        validateBookingRequest(request);
+
         // Validate that the slot is available using AvailabilityService
         boolean slotAvailable = availabilityService.isMechanicAvailable(
                 request.getDate(), request.getStartTime(), request.getEndTime(), request.getOperationIds());
         if (!slotAvailable) {
-            throw new BadRequestError("No available mechanics for this time slot");
+            throw new ProcessingError(ErrorMessage.NO_AVAILABLE_MECHANICS_FOR_THIS_TIME_SLOT);
         }
 
         // Fetch the first available garage box with limit 1
@@ -73,17 +82,17 @@ public class BookingService {
         // Ensure there is at least one available garage box
         GarageBox garageBox = page.getContent().stream()
                 .findFirst()
-                .orElseThrow(() -> new BadRequestError("No available garage boxes"));
+                .orElseThrow(() -> new ProcessingError(ErrorMessage.NO_AVAILABLE_GARAGE_BOXES));
 
         // Fetch the operations to be performed
         List<GarageOperation> operations = garageOperationRepository.findAllById(request.getOperationIds());
         if (operations.size() != request.getOperationIds().size()) {
-            throw new BadRequestError("One or more operations not found");
+            throw new ProcessingError(ErrorMessage.OPERATION_NOT_FOUND);
         }
 
         // Fetch the customer entity from the repository
         Customer customer = customerRepository.findById(request.getCustomerId())
-                .orElseThrow(() -> new BadRequestError("Invalid customer ID"));
+                .orElseThrow(() -> new ProcessingError(ErrorMessage.INVALID_CUSTOMER_ID));
 
         // Create a new appointment with the given details
         GarageAppointment appointment = GarageAppointment.builder()
@@ -109,13 +118,13 @@ public class BookingService {
 
                     // Ensure at least one mechanic is available for this operation
                     if (availableMechanics.isEmpty()) {
-                        throw new BadRequestError("No available mechanics for this operation");
+                        throw new ProcessingError(ErrorMessage.NO_AVAILABLE_MECHANICS_FOR_THIS_OPERATION);
                     }
 
                     // Assign the first available mechanic to the operation
                     Employee assignedMechanic = availableMechanics.stream()
                             .findFirst()  // Pick the first available mechanic
-                            .orElseThrow(() -> new BadRequestError("No available mechanics for this operation"));
+                            .orElseThrow(() -> new ProcessingError("No available mechanics for this operation"));
 
                     // Create and return the appointment operation with the assigned mechanic
                     GarageAppointmentOperation appointmentOperation = GarageAppointmentOperation.builder()
@@ -157,6 +166,34 @@ public class BookingService {
                                 .build())
                         .toList())
                 .build();
+    }
+
+    /**
+     * Validates the booking request against the max-advance-days and min-advance-minutes constraints.
+     *
+     * @param request The booking request to validate.
+     * @throws ProcessingError if the request violates the defined constraints.
+     */
+    private void validateBookingRequest(BookingRequest request) {
+        LocalDate currentDate = LocalDate.now();
+        LocalTime currentTime = LocalTime.now();
+
+        // Validate max-advance-days
+        if (request.getDate().isAfter(currentDate.plusDays(reservationProperties.getMaxAdvanceDays()))) {
+            throw new ValidationError(String.format(ErrorMessage.BOOKING_CANNOT_BE_MADE_MORE_THAN,
+                    reservationProperties.getMaxAdvanceDays()));
+        }
+
+        // Validate min-advance-minutes
+        if (request.getDate().isEqual(currentDate)) {
+            Duration durationBetweenNowAndBooking = Duration.between(currentTime, request.getStartTime());
+            if (durationBetweenNowAndBooking.toMinutes() < reservationProperties.getMinAdvanceMinutes()) {
+                throw new ValidationError(String.format(ErrorMessage.BOOKING_MUST_BE_MADE_AT_LEAST,
+                        reservationProperties.getMinAdvanceMinutes()));
+            }
+        } else if (request.getDate().isBefore(currentDate)) {
+            throw new ValidationError(ErrorMessage.BOOKING_CANNOT_BE_MADE_FOR_A_PAST_DATE);
+        }
     }
 
     /**

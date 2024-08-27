@@ -1,16 +1,19 @@
 package com.bloomreach.garage.reservation.api.controller;
 
+import com.bloomreach.garage.reservation.api.error.BadRequestError;
+import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
 import com.bloomreach.garage.reservation.api.model.BookingRequest;
 import com.bloomreach.garage.reservation.api.model.BookingResponse;
-import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
 import com.bloomreach.garage.reservation.api.service.AvailabilityService;
 import com.bloomreach.garage.reservation.api.service.BookingService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,25 +38,23 @@ public class ReservationController {
     private final BookingService bookingService;
 
     /**
-     * Gets available time slots for a specific date and list of operations.
+     * Retrieves available time slots for the specified date and operation IDs.
      *
-     * @param date         The date for which to check available time slots.
-     * @param operationIds The list of operation IDs for which to check availability.
-     * @return List of available time slots for the specified date and operations.
+     * @param date         The date to check for available slots.
+     * @param operationIds The list of operation IDs to check availability.
+     * @return A list of available time slots.
      */
     @GetMapping("/availableSlots")
-    @Operation(summary = "Get available time slots", description = "Retrieves available time slots for a given date and list of operations.")
-    @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots")
-    @ApiResponse(responseCode = "400", description = "Invalid request parameters")
-    public ResponseEntity<List<AvailabilityResponse>> getAvailableSlots(@RequestParam("date") LocalDate date,
-                                                                        @RequestParam("operationIds") List<Long> operationIds) {
-        try {
-            List<AvailabilityResponse> availableSlots = availabilityService.findAvailableSlots(date, operationIds);
-            return ResponseEntity.ok(availableSlots);
-        } catch (Exception exc) {
-            log.error("Error retrieving available slots: {}", exc.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
+    @Operation(summary = "Find available time slots", description = "Retrieves available time slots for the given date and operation IDs.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots",
+                    content = @Content(schema = @Schema(implementation = AvailabilityResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request parameters",
+                    content = @Content(schema = @Schema(implementation = BadRequestError.class)))
+    })
+    public List<AvailabilityResponse> findAvailableSlots(@RequestParam LocalDate date,
+                                                         @RequestParam List<Long> operationIds) {
+        return availabilityService.findAvailableSlots(date, operationIds);
     }
 
     /**
@@ -64,15 +65,13 @@ public class ReservationController {
      */
     @PostMapping("/book")
     @Operation(summary = "Book appointments", description = "Books appointments based on the provided details.")
-    @ApiResponse(responseCode = "200", description = "Successfully booked the appointment")
-    @ApiResponse(responseCode = "400", description = "Invalid request parameters")
-    public ResponseEntity<BookingResponse> bookAppointments(@RequestBody BookingRequest bookingRequest) {
-        try {
-            BookingResponse bookingResponse = bookingService.bookAppointment(bookingRequest);
-            return ResponseEntity.ok(bookingResponse);
-        } catch (Exception exc) {
-            log.error("Error booking appointment: {}", exc.getMessage());
-            return ResponseEntity.badRequest().body(null); // You can customize this response based on requirements
-        }
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots",
+                    content = @Content(schema = @Schema(implementation = AvailabilityResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request parameters",
+                    content = @Content(schema = @Schema(implementation = BadRequestError.class)))
+    })
+    public BookingResponse bookAppointments(@RequestBody BookingRequest bookingRequest) {
+        return bookingService.bookAppointment(bookingRequest);
     }
 }

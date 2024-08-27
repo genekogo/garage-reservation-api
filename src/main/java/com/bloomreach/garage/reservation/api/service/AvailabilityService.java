@@ -2,6 +2,7 @@ package com.bloomreach.garage.reservation.api.service;
 
 import com.bloomreach.garage.reservation.api.entity.EmployeeWorkingHours;
 import com.bloomreach.garage.reservation.api.entity.GarageOperation;
+import com.bloomreach.garage.reservation.api.error.BadRequestError;
 import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
 import com.bloomreach.garage.reservation.api.repository.EmployeeWorkingHoursRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageOperationRepository;
@@ -33,10 +34,12 @@ public class AvailabilityService {
      * This method retrieves operations based on provided IDs and checks the available working hours
      * for mechanics on the given date. It then calculates possible time slots considering the duration
      * of each operation and mechanics' availability.
+     * </p>
      *
      * @param date         The date for which to find available slots.
      * @param operationIds The list of operation IDs to check for availability.
      * @return A list of available time slots for the given date and operations.
+     * @throws BadRequestError if the date is not within the allowed range.
      */
     @Cacheable(value = "availableSlots", key = "#date.toString()")
     public List<AvailabilityResponse> findAvailableSlots(LocalDate date, List<Long> operationIds) {
@@ -45,7 +48,7 @@ public class AvailabilityService {
         // Fetch operations by their IDs
         List<GarageOperation> operations = garageOperationRepository.findAllById(operationIds);
         if (operations.size() != operationIds.size()) {
-            throw new IllegalArgumentException("One or more operations not found");
+            throw new BadRequestError("One or more operations not found");
         }
 
         // Retrieve working hours for mechanics on the specified date
@@ -64,17 +67,17 @@ public class AvailabilityService {
      * Validates that the given date is within the allowable range (not in the past and within 2 weeks from now).
      *
      * @param date The date to validate.
-     * @throws IllegalArgumentException if the date is not within the allowed range.
+     * @throws BadRequestError if the date is not within the allowed range.
      */
     private void validateDate(LocalDate date) {
         LocalDate now = LocalDate.now();
         LocalDate twoWeeksFromNow = now.plusWeeks(2);
 
         if (date.isBefore(now)) {
-            throw new IllegalArgumentException("Date cannot be in the past");
+            throw new BadRequestError("Date cannot be in the past");
         }
         if (date.isAfter(twoWeeksFromNow)) {
-            throw new IllegalArgumentException("Date cannot be more than 2 weeks in advance");
+            throw new BadRequestError("Date cannot be more than 2 weeks in advance");
         }
     }
 
@@ -83,6 +86,7 @@ public class AvailabilityService {
      * <p>
      * Time slots are determined by checking if each operation's duration fits within the mechanic's available working hours.
      * If no operations are available, a default slot duration is used to determine possible slots.
+     * </p>
      *
      * @param workingHours The working hours of the mechanic.
      * @param operations   The list of operations to accommodate within the time slots.
@@ -127,17 +131,19 @@ public class AvailabilityService {
      * Checks if there is a mechanic available during the specified time slot for the given date and operations.
      * <p>
      * This method ensures that there are mechanics who are not only available but also not already assigned to other appointments.
+     * </p>
      *
      * @param date         The date of the appointment.
      * @param startTime    The start time of the appointment slot.
      * @param endTime      The end time of the appointment slot.
      * @param operationIds The list of operation IDs to consider.
      * @return True if a mechanic is available, false otherwise.
+     * @throws BadRequestError if any of the operation IDs are not found.
      */
     public boolean isMechanicAvailable(LocalDate date, LocalTime startTime, LocalTime endTime, List<Long> operationIds) {
         List<GarageOperation> operations = garageOperationRepository.findAllById(operationIds);
         if (operations.size() != operationIds.size()) {
-            throw new IllegalArgumentException("One or more operations not found");
+            throw new BadRequestError("One or more operations not found");
         }
 
         List<EmployeeWorkingHours> availableMechanics = employeeWorkingHoursRepository.findByDayOfWeek(date.getDayOfWeek());

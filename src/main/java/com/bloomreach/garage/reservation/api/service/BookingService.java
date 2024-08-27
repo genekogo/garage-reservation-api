@@ -7,6 +7,7 @@ import com.bloomreach.garage.reservation.api.entity.GarageAppointment;
 import com.bloomreach.garage.reservation.api.entity.GarageAppointmentOperation;
 import com.bloomreach.garage.reservation.api.entity.GarageBox;
 import com.bloomreach.garage.reservation.api.entity.GarageOperation;
+import com.bloomreach.garage.reservation.api.error.BadRequestError;
 import com.bloomreach.garage.reservation.api.model.BookingRequest;
 import com.bloomreach.garage.reservation.api.model.BookingResponse;
 import com.bloomreach.garage.reservation.api.repository.CustomerRepository;
@@ -53,7 +54,7 @@ public class BookingService {
      *
      * @param request The booking request containing details of the appointment.
      * @return A response containing the booked appointment details.
-     * @throws IllegalArgumentException if no mechanics, garage boxes, or operations are available.
+     * @throws BadRequestError if no mechanics, garage boxes, or operations are available.
      */
     @Transactional
     @CacheEvict(value = "availableSlots", key = "#request.date.toString()")
@@ -62,7 +63,7 @@ public class BookingService {
         boolean slotAvailable = availabilityService.isMechanicAvailable(
                 request.getDate(), request.getStartTime(), request.getEndTime(), request.getOperationIds());
         if (!slotAvailable) {
-            throw new IllegalArgumentException("No available mechanics for this time slot");
+            throw new BadRequestError("No available mechanics for this time slot");
         }
 
         // Fetch the first available garage box with limit 1
@@ -72,17 +73,17 @@ public class BookingService {
         // Ensure there is at least one available garage box
         GarageBox garageBox = page.getContent().stream()
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No available garage boxes"));
+                .orElseThrow(() -> new BadRequestError("No available garage boxes"));
 
         // Fetch the operations to be performed
         List<GarageOperation> operations = garageOperationRepository.findAllById(request.getOperationIds());
         if (operations.size() != request.getOperationIds().size()) {
-            throw new IllegalArgumentException("One or more operations not found");
+            throw new BadRequestError("One or more operations not found");
         }
 
         // Fetch the customer entity from the repository
         Customer customer = customerRepository.findById(request.getCustomerId())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid customer ID"));
+                .orElseThrow(() -> new BadRequestError("Invalid customer ID"));
 
         // Create a new appointment with the given details
         GarageAppointment appointment = GarageAppointment.builder()
@@ -108,13 +109,13 @@ public class BookingService {
 
                     // Ensure at least one mechanic is available for this operation
                     if (availableMechanics.isEmpty()) {
-                        throw new IllegalArgumentException("No available mechanics for this operation");
+                        throw new BadRequestError("No available mechanics for this operation");
                     }
 
                     // Assign the first available mechanic to the operation
                     Employee assignedMechanic = availableMechanics.stream()
                             .findFirst()  // Pick the first available mechanic
-                            .orElseThrow(() -> new IllegalArgumentException("No available mechanics for this operation"));
+                            .orElseThrow(() -> new BadRequestError("No available mechanics for this operation"));
 
                     // Create and return the appointment operation with the assigned mechanic
                     GarageAppointmentOperation appointmentOperation = GarageAppointmentOperation.builder()

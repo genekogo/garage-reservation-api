@@ -86,6 +86,7 @@ public class AvailabilityService {
      * <p>
      * Time slots are determined by checking if each operation's duration fits within the mechanic's available working hours.
      * If no operations are available, a default slot duration is used to determine possible slots.
+     * Slots are filtered to ensure they are not in the past and respect the minimum advance minutes.
      * </p>
      *
      * @param workingHours The working hours of the mechanic.
@@ -103,6 +104,9 @@ public class AvailabilityService {
                 .min(Integer::compareTo)
                 .orElse(reservationProperties.getDefaultSlotDuration()); // Use default slot duration if no operations found
 
+        // Calculate minimum advance time
+        LocalTime nowPlusMinAdvance = LocalTime.now().plusMinutes(reservationProperties.getMinAdvanceMinutes());
+
         // Calculate possible time slots
         while (start.plusMinutes(minDuration).isBefore(end)) {
             boolean canAccommodateAll = true;
@@ -117,7 +121,8 @@ public class AvailabilityService {
                 }
             }
 
-            if (canAccommodateAll) {
+            // Check if the slot is in the past or less than the minimum advance time
+            if (canAccommodateAll && !start.isBefore(nowPlusMinAdvance)) {
                 availableSlots.add(new AvailabilityResponse(start, slotEnd));
             }
 

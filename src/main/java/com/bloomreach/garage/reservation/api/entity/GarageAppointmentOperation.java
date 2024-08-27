@@ -1,17 +1,26 @@
 package com.bloomreach.garage.reservation.api.entity;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder(toBuilder = true)
+@Builder
 @Entity
 @Table(name = "garage_appointment_operations")
 @Schema(description = "Details of an operation associated with a garage appointment.")
@@ -39,4 +48,14 @@ public class GarageAppointmentOperation {
     @NotNull
     @Schema(description = "The employee performing the operation")
     private Employee employee;
+
+    @Column(name = "start_time", nullable = false)
+    @NotNull
+    @Schema(description = "Start time of the operation")
+    private LocalTime startTime;
+
+    @Column(name = "end_time", nullable = false)
+    @NotNull
+    @Schema(description = "End time of the operation")
+    private LocalTime endTime;
 }

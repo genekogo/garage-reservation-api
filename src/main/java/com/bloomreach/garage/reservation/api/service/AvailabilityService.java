@@ -1,9 +1,11 @@
 package com.bloomreach.garage.reservation.api.service;
 
 import com.bloomreach.garage.reservation.api.entity.EmployeeWorkingHours;
+import com.bloomreach.garage.reservation.api.entity.GarageAppointmentOperation;
 import com.bloomreach.garage.reservation.api.entity.GarageOperation;
 import com.bloomreach.garage.reservation.api.model.TimeSlot;
 import com.bloomreach.garage.reservation.api.repository.EmployeeWorkingHoursRepository;
+import com.bloomreach.garage.reservation.api.repository.GarageAppointmentOperationRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageOperationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -20,6 +22,7 @@ public class AvailabilityService {
 
     private final GarageOperationRepository garageOperationRepository;
     private final EmployeeWorkingHoursRepository employeeWorkingHoursRepository;
+    private final GarageAppointmentOperationRepository garageAppointmentOperationRepository;
 
     /**
      * Finds available time slots for the specified date and operation IDs.
@@ -102,10 +105,18 @@ public class AvailabilityService {
             throw new IllegalArgumentException("One or more operations not found");
         }
 
+        // Check mechanic working hours
         List<EmployeeWorkingHours> availableMechanics = employeeWorkingHoursRepository.findByDayOfWeek(date.getDayOfWeek());
         for (EmployeeWorkingHours workingHours : availableMechanics) {
             if (startTime.isBefore(workingHours.getEndTime()) && endTime.isAfter(workingHours.getStartTime())) {
-                return true;
+
+                // Check for overlapping appointments
+                List<GarageAppointmentOperation> overlappingAppointments = garageAppointmentOperationRepository.findOverlappingAppointments(
+                        workingHours.getEmployee().getId(), date, startTime, endTime);
+
+                if (overlappingAppointments.isEmpty()) {
+                    return true;
+                }
             }
         }
 

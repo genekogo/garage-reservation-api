@@ -86,6 +86,8 @@ CREATE TABLE garage_appointment_operations (
     appointment_id INT NOT NULL,  -- Foreign key referencing the garage_appointments table
     operation_id INT NOT NULL,  -- Foreign key referencing the garage_operations table
     employee_id INT NOT NULL,  -- Foreign key referencing the employees table
+    start_time TIME NOT NULL,  -- Start time of the operation
+    end_time TIME NOT NULL,  -- End time of the operation
     FOREIGN KEY (appointment_id) REFERENCES garage_appointments(id),  -- Foreign key constraint
     FOREIGN KEY (operation_id) REFERENCES garage_operations(id),  -- Foreign key constraint
     FOREIGN KEY (employee_id) REFERENCES employees(id)  -- Foreign key constraint

@@ -11,6 +11,7 @@ import com.bloomreach.garage.reservation.api.model.BookingRequest;
 import com.bloomreach.garage.reservation.api.model.BookingResponse;
 import com.bloomreach.garage.reservation.api.repository.CustomerRepository;
 import com.bloomreach.garage.reservation.api.repository.EmployeeWorkingHoursRepository;
+import com.bloomreach.garage.reservation.api.repository.GarageAppointmentOperationRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageAppointmentRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageBoxRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageOperationRepository;
@@ -23,16 +24,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-/**
- * Service for handling booking operations.
- */
 @RequiredArgsConstructor
 @Service
 public class BookingService {
@@ -43,6 +39,7 @@ public class BookingService {
     private final GarageBoxRepository garageBoxRepository;
     private final EmployeeWorkingHoursRepository employeeWorkingHoursRepository;
     private final CustomerRepository customerRepository;
+    private final GarageAppointmentOperationRepository garageAppointmentOperationRepository;
 
     @Transactional
     @CacheEvict(value = "availableSlots", key = "#request.date.toString()")
@@ -73,15 +70,13 @@ public class BookingService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid customer ID"));
 
         // Create the appointment
-        GarageAppointment appointment = new GarageAppointment();
-        appointment.setCustomer(customer);
-        appointment.setDate(request.getDate());
-        appointment.setStartTime(request.getStartTime());
-        appointment.setEndTime(request.getEndTime());
-        appointment.setGarageBox(garageBox);
-
-        // Track assigned mechanics
-        Set<Employee> assignedMechanics = new HashSet<>();
+        GarageAppointment appointment = GarageAppointment.builder()
+                .customer(customer)
+                .date(request.getDate())
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
+                .garageBox(garageBox)
+                .build();
 
         // Track the current time in the appointment
         AtomicReference<LocalTime> currentOperationStartTime = new AtomicReference<>(request.getStartTime());
@@ -94,7 +89,7 @@ public class BookingService {
                     LocalTime operationEndTime = currentOperationStartTime.get().plusMinutes(operationDuration);
 
                     // Find available mechanics for the operation with its own time window
-                    List<Employee> availableMechanics = findAvailableMechanics(request.getDate(), currentOperationStartTime.get(), operationEndTime, assignedMechanics);
+                    List<Employee> availableMechanics = findAvailableMechanics(request.getDate(), currentOperationStartTime.get(), operationEndTime);
 
                     // Ensure unique selection of mechanics and operations
                     if (availableMechanics.isEmpty()) {
@@ -110,17 +105,16 @@ public class BookingService {
                             .appointment(appointment)
                             .operation(operation)
                             .employee(assignedMechanic)
+                            .startTime(currentOperationStartTime.get())  // Add the start time
+                            .endTime(operationEndTime)                    // Add the end time
                             .build();
-
-                    // Add the assigned mechanic to the set (even though they can be assigned multiple times, track their assignments)
-                    assignedMechanics.add(assignedMechanic);
 
                     // Update the currentOperationStartTime to the end time of the current operation
                     currentOperationStartTime.set(operationEndTime);
 
                     return appointmentOperation;
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         // Set operations for the appointment
         appointment.setOperations(appointmentOperations);
@@ -143,21 +137,22 @@ public class BookingService {
                                 .id(operation.getId())
                                 .operation(operation.getOperation())
                                 .employee(operation.getEmployee())
+                                .startTime(operation.getStartTime())
+                                .endTime(operation.getEndTime())
                                 .build())
-                        .collect(Collectors.toList()))
+                        .toList())
                 .build();
     }
 
     /**
      * Finds available mechanics for the given date and time, excluding those already assigned.
      *
-     * @param date              The date of the appointment.
-     * @param startTime         The start time of the appointment.
-     * @param endTime           The end time of the appointment.
-     * @param assignedMechanics The set of mechanics already assigned.
+     * @param date      The date of the appointment.
+     * @param startTime The start time of the appointment.
+     * @param endTime   The end time of the appointment.
      * @return List of available mechanics.
      */
-    private List<Employee> findAvailableMechanics(LocalDate date, LocalTime startTime, LocalTime endTime, Set<Employee> assignedMechanics) {
+    private List<Employee> findAvailableMechanics(LocalDate date, LocalTime startTime, LocalTime endTime) {
         // Fetch all working hours for the day of the week
         List<EmployeeWorkingHours> workingHoursList = employeeWorkingHoursRepository.findByDayOfWeek(date.getDayOfWeek());
 
@@ -181,27 +176,24 @@ public class BookingService {
                     return employeeWorkingHours.stream()
                             .anyMatch(workingHours ->
                                     workingHours.getStartTime().isBefore(endTime) &&
-                                            workingHours.getEndTime().isAfter(startTime));
+                                            workingHours.getEndTime().isAfter(startTime) &&
+                                            !hasOverlappingAppointments(employee.getId(), date, startTime, endTime));
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
-     * Finds mechanics who are already assigned to appointments during the given date and time.
+     * Checks if an employee has overlapping appointments within the given time slot.
      *
-     * @param date      The date of the appointment.
-     * @param startTime The start time of the appointment.
-     * @param endTime   The end time of the appointment.
-     * @return Set of already assigned mechanics.
+     * @param employeeId The ID of the employee.
+     * @param date       The date of the appointment.
+     * @param startTime  The start time of the appointment.
+     * @param endTime    The end time of the appointment.
+     * @return True if there are overlapping appointments, false otherwise.
      */
-    private Set<Employee> findAssignedMechanics(LocalDate date, LocalTime startTime, LocalTime endTime) {
-        // Fetch all appointments within the given time slot
-        List<GarageAppointment> appointments = garageAppointmentRepository.findByDateAndStartTimeBeforeAndEndTimeAfter(date, startTime, endTime);
-
-        // Collect all employees who are already assigned to appointments in the time slot
-        return appointments.stream()
-                .flatMap(appointment -> appointment.getOperations().stream())
-                .map(GarageAppointmentOperation::getEmployee)
-                .collect(Collectors.toSet());
+    private boolean hasOverlappingAppointments(Long employeeId, LocalDate date, LocalTime startTime, LocalTime endTime) {
+        List<GarageAppointmentOperation> overlappingAppointments =
+                garageAppointmentOperationRepository.findOverlappingAppointments(employeeId, date, startTime, endTime);
+        return !overlappingAppointments.isEmpty();
     }
 }

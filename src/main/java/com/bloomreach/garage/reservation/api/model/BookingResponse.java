@@ -34,6 +34,8 @@ public class BookingResponse {
     public static class GarageAppointmentOperation {
         private Long id;
         private GarageOperation operation;
+        private LocalTime startTime;
+        private LocalTime endTime;
         private Employee employee;
     }
 }

@@ -41,6 +41,20 @@ public class BookingService {
     private final CustomerRepository customerRepository;
     private final GarageAppointmentOperationRepository garageAppointmentOperationRepository;
 
+    /**
+     * Books an appointment based on the provided booking request.
+     * <p>
+     * This method performs the following steps:
+     * 1. Checks if a mechanic is available for the requested time slot.
+     * 2. Fetches an available garage box.
+     * 3. Retrieves the requested operations.
+     * 4. Creates and saves a new appointment with the selected garage box and assigned operations.
+     * 5. Returns a response containing the appointment details.
+     *
+     * @param request The booking request containing details of the appointment.
+     * @return A response containing the booked appointment details.
+     * @throws IllegalArgumentException if no mechanics, garage boxes, or operations are available.
+     */
     @Transactional
     @CacheEvict(value = "availableSlots", key = "#request.date.toString()")
     public BookingResponse bookAppointment(BookingRequest request) {
@@ -55,6 +69,7 @@ public class BookingService {
         Page<GarageBox> page = garageBoxRepository.findAvailableBox(
                 request.getDate(), request.getStartTime(), request.getEndTime(), PageRequest.of(0, 1));
 
+        // Ensure there is at least one available garage box
         GarageBox garageBox = page.getContent().stream()
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No available garage boxes"));
@@ -65,11 +80,11 @@ public class BookingService {
             throw new IllegalArgumentException("One or more operations not found");
         }
 
-        // Fetch the customer entity
+        // Fetch the customer entity from the repository
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid customer ID"));
 
-        // Create the appointment
+        // Create a new appointment with the given details
         GarageAppointment appointment = GarageAppointment.builder()
                 .customer(customer)
                 .date(request.getDate())
@@ -81,48 +96,47 @@ public class BookingService {
         // Track the current time in the appointment
         AtomicReference<LocalTime> currentOperationStartTime = new AtomicReference<>(request.getStartTime());
 
-        // Find and assign mechanics to operations
+        // Assign mechanics to each operation and calculate appointment operations
         List<GarageAppointmentOperation> appointmentOperations = operations.stream()
                 .map(operation -> {
                     // Calculate the end time for this operation
                     Integer operationDuration = operation.getDurationInMinutes();
                     LocalTime operationEndTime = currentOperationStartTime.get().plusMinutes(operationDuration);
 
-                    // Find available mechanics for the operation with its own time window
+                    // Find available mechanics for the operation within its time window
                     List<Employee> availableMechanics = findAvailableMechanics(request.getDate(), currentOperationStartTime.get(), operationEndTime);
 
-                    // Ensure unique selection of mechanics and operations
+                    // Ensure at least one mechanic is available for this operation
                     if (availableMechanics.isEmpty()) {
                         throw new IllegalArgumentException("No available mechanics for this operation");
                     }
 
+                    // Assign the first available mechanic to the operation
                     Employee assignedMechanic = availableMechanics.stream()
                             .findFirst()  // Pick the first available mechanic
                             .orElseThrow(() -> new IllegalArgumentException("No available mechanics for this operation"));
 
-                    // Create and return the appointment operation with appointment set
+                    // Create and return the appointment operation with the assigned mechanic
                     GarageAppointmentOperation appointmentOperation = GarageAppointmentOperation.builder()
                             .appointment(appointment)
                             .operation(operation)
                             .employee(assignedMechanic)
-                            .startTime(currentOperationStartTime.get())  // Add the start time
-                            .endTime(operationEndTime)                    // Add the end time
+                            .startTime(currentOperationStartTime.get())  // Start time of the operation
+                            .endTime(operationEndTime)                    // End time of the operation
                             .build();
 
-                    // Update the currentOperationStartTime to the end time of the current operation
+                    // Update the start time for the next operation
                     currentOperationStartTime.set(operationEndTime);
 
                     return appointmentOperation;
                 })
                 .toList();
 
-        // Set operations for the appointment
+        // Set operations for the appointment and save it
         appointment.setOperations(appointmentOperations);
-
-        // Save the appointment
         GarageAppointment savedAppointment = garageAppointmentRepository.save(appointment);
 
-        // Create response
+        // Build and return the response with the appointment and operation details
         return BookingResponse.builder()
                 .customer(customer)
                 .appointment(BookingResponse.GarageAppointment.builder()
@@ -145,22 +159,25 @@ public class BookingService {
     }
 
     /**
-     * Finds available mechanics for the given date and time, excluding those already assigned.
+     * Finds available mechanics who are not already assigned to other appointments during the specified time slot.
+     * <p>
+     * This method retrieves all mechanics' working hours for the given day and filters them based on their availability
+     * during the provided time slot.
      *
      * @param date      The date of the appointment.
      * @param startTime The start time of the appointment.
      * @param endTime   The end time of the appointment.
-     * @return List of available mechanics.
+     * @return A list of available mechanics who are not assigned to other appointments.
      */
     private List<Employee> findAvailableMechanics(LocalDate date, LocalTime startTime, LocalTime endTime) {
-        // Fetch all working hours for the day of the week
+        // Fetch all working hours for the mechanics on the specified day of the week
         List<EmployeeWorkingHours> workingHoursList = employeeWorkingHoursRepository.findByDayOfWeek(date.getDayOfWeek());
 
         // Create a map of employeeId to their working hours
         Map<Long, List<EmployeeWorkingHours>> employeeWorkingHoursMap = workingHoursList.stream()
                 .collect(Collectors.groupingBy(workingHours -> workingHours.getEmployee().getId()));
 
-        // Find available mechanics based on appointment time, excluding those who are already assigned
+        // Filter and find available mechanics based on working hours and appointment time slot
         return workingHoursList.stream()
                 .map(EmployeeWorkingHours::getEmployee)
                 .filter(employee -> {
@@ -172,7 +189,7 @@ public class BookingService {
                         return false;
                     }
 
-                    // Check if the employee is available in the given time slot
+                    // Check if the employee is available within the provided time slot
                     return employeeWorkingHours.stream()
                             .anyMatch(workingHours ->
                                     workingHours.getStartTime().isBefore(endTime) &&
@@ -183,7 +200,10 @@ public class BookingService {
     }
 
     /**
-     * Checks if an employee has overlapping appointments within the given time slot.
+     * Checks if the given employee has any overlapping appointments within the specified time slot.
+     * <p>
+     * This method queries the repository for any existing appointments that overlap with the given time slot
+     * for the specified employee.
      *
      * @param employeeId The ID of the employee.
      * @param date       The date of the appointment.

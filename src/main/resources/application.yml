@@ -32,5 +32,6 @@ spring:
 
 garage:
   reservation:
-    max-advance-days: 14  # Max days in advance to allow booking
-    min-advance-minutes: 30  # Min minutes in advance for the earliest possible slot
+    max-advance-days: 14  # Maximum number of days in advance a reservation can be made.
+    min-advance-minutes: 30  # Minimum number of minutes before the start time that a reservation must be made.
+    default-slot-duration: 30  # Default duration of an appointment slot, in minutes, if not specified otherwise.

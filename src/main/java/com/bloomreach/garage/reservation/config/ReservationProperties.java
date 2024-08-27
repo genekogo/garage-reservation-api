@@ -9,7 +9,9 @@ import org.springframework.stereotype.Component;
 @Setter
 @Component
 @ConfigurationProperties(prefix = "garage.reservation")
-public class GarageReservationProperties {
+public class ReservationProperties {
+
     private int maxAdvanceDays;
     private int minAdvanceMinutes;
+    private int defaultSlotDuration;
 }

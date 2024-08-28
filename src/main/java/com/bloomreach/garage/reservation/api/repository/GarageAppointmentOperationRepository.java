@@ -27,7 +27,7 @@ public interface GarageAppointmentOperationRepository extends JpaRepository<Gara
      * that overlap with the provided time window.
      * <p>
      * An operation overlaps if it has any time period within the given start and end times,
-     * including the case where the operation starts before and ends after the specified time window.
+     * including cases where the operation starts before and ends after the specified time window.
      * </p>
      *
      * @param employeeId The ID of the employee whose operations are to be checked.

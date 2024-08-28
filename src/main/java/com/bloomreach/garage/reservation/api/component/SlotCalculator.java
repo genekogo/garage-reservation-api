@@ -2,7 +2,7 @@ package com.bloomreach.garage.reservation.api.component;
 
 import com.bloomreach.garage.reservation.api.entity.EmployeeWorkingHours;
 import com.bloomreach.garage.reservation.api.entity.GarageOperation;
-import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
+import com.bloomreach.garage.reservation.api.model.AvailableSlot;
 import com.bloomreach.garage.reservation.config.ReservationProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -28,16 +28,17 @@ public class SlotCalculator {
      * @param operations   The list of operations to accommodate within the time slots.
      * @return A list of available time slots for the mechanic.
      */
-    public List<AvailabilityResponse> calculateSlots(EmployeeWorkingHours workingHours, List<GarageOperation> operations) {
-        List<AvailabilityResponse> availableSlots = new ArrayList<>();
+    public List<AvailableSlot> calculateSlots(EmployeeWorkingHours workingHours, List<GarageOperation> operations) {
+        List<AvailableSlot> availableSlots = new ArrayList<>();
         LocalTime start = workingHours.getStartTime();
         LocalTime end = workingHours.getEndTime();
 
         // Determine the minimum operation duration or use the default duration
-        int minDuration = operations.stream()
-                .map(GarageOperation::getDurationInMinutes)
-                .min(Integer::compareTo)
-                .orElse(reservationProperties.getDefaultSlotDuration());
+//        int minDuration = operations.stream()
+//                .map(GarageOperation::getDurationInMinutes)
+//                .min(Integer::compareTo)
+//                .orElse(reservationProperties.getDefaultSlotDuration());
+        int minDuration = reservationProperties.getDefaultSlotDuration();
 
         // Calculate minimum advance time
         LocalTime nowPlusMinAdvance = LocalTime.now().plusMinutes(reservationProperties.getMinAdvanceMinutes());
@@ -56,7 +57,7 @@ public class SlotCalculator {
             }
 
             if (canAccommodateAll && !start.isBefore(nowPlusMinAdvance)) {
-                availableSlots.add(new AvailabilityResponse(start, slotEnd));
+                availableSlots.add(new AvailableSlot(start, slotEnd));
             }
 
             start = start.plusMinutes(minDuration);

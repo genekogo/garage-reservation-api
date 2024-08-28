@@ -1,14 +1,16 @@
 package com.bloomreach.garage.reservation.api.service;
 
+import com.bloomreach.garage.reservation.api.component.SlotCalculator;
 import com.bloomreach.garage.reservation.api.entity.EmployeeWorkingHours;
+import com.bloomreach.garage.reservation.api.entity.GarageAppointmentOperation;
 import com.bloomreach.garage.reservation.api.entity.GarageOperation;
 import com.bloomreach.garage.reservation.api.error.ErrorMessage;
 import com.bloomreach.garage.reservation.api.error.ProcessingError;
 import com.bloomreach.garage.reservation.api.error.ValidationError;
-import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
+import com.bloomreach.garage.reservation.api.model.AvailableSlot;
 import com.bloomreach.garage.reservation.api.repository.EmployeeWorkingHoursRepository;
+import com.bloomreach.garage.reservation.api.repository.GarageAppointmentOperationRepository;
 import com.bloomreach.garage.reservation.api.repository.GarageOperationRepository;
-import com.bloomreach.garage.reservation.api.component.SlotCalculator;
 import com.bloomreach.garage.reservation.api.validator.AvailabilityValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -16,8 +18,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Service responsible for calculating and providing available time slots for garage operations
@@ -29,6 +33,7 @@ public class AvailabilityService {
 
     private final GarageOperationRepository garageOperationRepository;
     private final EmployeeWorkingHoursRepository employeeWorkingHoursRepository;
+    private final GarageAppointmentOperationRepository garageAppointmentOperationRepository;
     private final AvailabilityValidator availabilityValidator;
     private final SlotCalculator slotCalculator;
 
@@ -40,8 +45,8 @@ public class AvailabilityService {
      * @return A list of available time slots for the given date and operations.
      * @throws ValidationError if the date is not within the allowed range.
      */
-    @Cacheable(value = "availableSlots", key = "#date.toString()")
-    public List<AvailabilityResponse> findAvailableSlots(LocalDate date, List<Long> operationIds) {
+//    @Cacheable(value = "availableSlots", key = "#date.toString() + '-' + #operationIds.toString()")
+    public List<AvailableSlot> findAvailableSlots(LocalDate date, List<Long> operationIds) {
         availabilityValidator.validate(date);
 
         List<GarageOperation> operations = garageOperationRepository.findAllById(operationIds);
@@ -49,14 +54,30 @@ public class AvailabilityService {
             throw new ValidationError(ErrorMessage.OPERATION_NOT_FOUND);
         }
 
+        // Fetch all employee working hours for the specified date
         List<EmployeeWorkingHours> availableMechanics = employeeWorkingHoursRepository.findByDayOfWeek(date.getDayOfWeek());
-        List<AvailabilityResponse> availableSlots = new ArrayList<>();
+        Set<AvailableSlot> availableSlotsSet = new HashSet<>();
 
+        // For each mechanic, calculate slots and filter out those that are booked
         for (EmployeeWorkingHours workingHours : availableMechanics) {
-            availableSlots.addAll(slotCalculator.calculateSlots(workingHours, operations));
+            // Fetch all booked slots for the mechanic on the given date
+            List<GarageAppointmentOperation> bookedSlots = garageAppointmentOperationRepository.findOverlappingAppointments(
+                    workingHours.getEmployee().getId(), date, workingHours.getStartTime(), workingHours.getEndTime());
+
+            // Filter out booked slots from the available slots
+            List<AvailableSlot> slots = slotCalculator.calculateSlots(workingHours, operations);
+            List<AvailableSlot> filteredSlots = slots.stream()
+                    .filter(slot -> bookedSlots.stream()
+                            .noneMatch(bookedSlot -> slot.getStartTime().isBefore(bookedSlot.getEndTime())
+                                    && slot.getEndTime().isAfter(bookedSlot.getStartTime())))
+                    .toList();
+
+            availableSlotsSet.addAll(filteredSlots);
         }
 
-        return availableSlots;
+        return availableSlotsSet.stream()
+                .sorted(Comparator.comparing(AvailableSlot::getStartTime))
+                .toList();
     }
 
     /**

@@ -18,7 +18,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Represents a time slot with a start and end time.")
-public class AvailabilityResponse {
+public class AvailableSlot {
 
     @Schema(description = "The start time of the time slot.",
             example = "09:00:00", pattern = "HH:mm:ss", type = "string")

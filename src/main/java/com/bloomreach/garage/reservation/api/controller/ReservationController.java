@@ -2,7 +2,7 @@ package com.bloomreach.garage.reservation.api.controller;
 
 import com.bloomreach.garage.reservation.api.error.ProcessingError;
 import com.bloomreach.garage.reservation.api.error.ValidationError;
-import com.bloomreach.garage.reservation.api.model.AvailabilityResponse;
+import com.bloomreach.garage.reservation.api.model.AvailableSlot;
 import com.bloomreach.garage.reservation.api.model.BookingRequest;
 import com.bloomreach.garage.reservation.api.model.BookingResponse;
 import com.bloomreach.garage.reservation.api.service.AvailabilityService;
@@ -43,18 +43,18 @@ public class ReservationController {
      *
      * @param date         The date to check for available slots.
      * @param operationIds The list of operation IDs to check availability.
-     * @return A list of available time slots.
+     * @return A Set of available time slots.
      */
     @GetMapping("/availableSlots")
     @Operation(summary = "Find available time slots", description = "Retrieves available time slots for the given date and operation IDs.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots",
-                    content = @Content(schema = @Schema(implementation = AvailabilityResponse.class))),
+                    content = @Content(schema = @Schema(implementation = AvailableSlot.class))),
             @ApiResponse(responseCode = "400", description = "Validation error",
                     content = @Content(schema = @Schema(implementation = ValidationError.class)))
     })
-    public List<AvailabilityResponse> findAvailableSlots(@RequestParam LocalDate date,
-                                                         @RequestParam List<Long> operationIds) {
+    public List<AvailableSlot> findAvailableSlots(@RequestParam LocalDate date,
+                                                  @RequestParam List<Long> operationIds) {
         return availabilityService.findAvailableSlots(date, operationIds);
     }
 
@@ -68,7 +68,7 @@ public class ReservationController {
     @Operation(summary = "Book appointments", description = "Books appointments based on the provided details.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots",
-                    content = @Content(schema = @Schema(implementation = AvailabilityResponse.class))),
+                    content = @Content(schema = @Schema(implementation = AvailableSlot.class))),
             @ApiResponse(responseCode = "400", description = "Validation error",
                     content = @Content(schema = @Schema(implementation = ValidationError.class))),
             @ApiResponse(responseCode = "400", description = "Processing error",

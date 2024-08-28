@@ -44,7 +44,7 @@ public class BookingService {
      * @throws ProcessingError if validation fails or if resources are not available.
      */
     @Transactional
-    @CacheEvict(value = "availableSlots", key = "#request.date.toString()")
+    @CacheEvict(value = "availableSlots", allEntries = true/*, condition = "#date != null" */)
     public BookingResponse bookAppointment(BookingRequest request) {
         // Validate the booking request
         bookingValidator.validate(request);

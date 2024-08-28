@@ -132,3 +132,59 @@ Using this collection will help you quickly test and interact with the Garage Re
 ## Note on JUnit Tests
 
 Please be aware that JUnit tests for this project have been skipped.
+
+## Business Logic
+
+### Overview
+
+The Garage Reservation API manages the scheduling and booking of garage appointments. It handles the reservation of garage boxes and the allocation of mechanics for various operations. The primary business logic revolves around checking availability, booking appointments, and managing reservations.
+
+### Key Components
+
+#### 1. **Availability Checking**
+
+The API determines whether mechanics and garage boxes are available for a given time slot on a specified date. This involves:
+
+- **Fetching Mechanic Availability**: Retrieves the working hours of mechanics for a given day and checks if they are free during the desired time slot.
+- **Slot Calculation**: Calculates available time slots based on mechanics' working hours and any pre-existing bookings.
+- **Operation Constraints**: Ensures that the mechanics can perform the requested operations within their available slots.
+
+#### 2. **Booking an Appointment**
+
+When a customer requests to book an appointment, the API:
+
+- **Validates the Booking Request**: Ensures the requested date and time are within acceptable limits (e.g., no booking too far in advance or too close to the current time).
+- **Checks Mechanic and Garage Box Availability**: Verifies that a mechanic and a garage box are available for the requested time slot and operations.
+- **Assigns Mechanics to Operations**: For each operation, finds an available mechanic, ensuring that the mechanic is free for the entire duration of the operation.
+- **Creates and Saves the Appointment**: Generates a new appointment record, assigns the selected garage box and mechanics, and saves the appointment in the database.
+
+#### 3. **Managing Available Slots**
+
+- **Available Slots Endpoint**: Returns a list of available time slots for a given date and list of operation IDs. This list is dynamically calculated by considering both mechanics' working hours and any pre-existing appointments.
+- **Cache Management**: Utilizes caching to optimize performance for frequently accessed available slots data. Cache entries are updated or evicted as necessary when appointments are booked to ensure up-to-date availability information.
+
+#### 4. **Error Handling**
+
+- **Validation Errors**: Handles cases where booking requests are invalid (e.g., invalid date, time conflicts).
+- **Processing Errors**: Manages scenarios where no mechanics or garage boxes are available for the requested time slot or operations.
+- **Custom Error Messages**: Provides detailed error messages to assist clients in understanding why a request may have failed.
+
+### Business Rules
+
+1. **Booking Constraints**:
+    - **Max Advance Days**: A booking cannot be made more than a specified number of days in advance.
+    - **Min Advance Minutes**: A booking must be made at least a specified number of minutes before the desired start time.
+
+2. **Mechanic Availability**:
+    - **Operation Duration**: Mechanics must be available for the entire duration of each operation.
+    - **Overlap Checking**: Mechanic appointments are checked for overlap to avoid double-booking.
+
+3. **Garage Box Allocation**:
+    - **Single Box Allocation**: Each appointment is assigned a single garage box, which is selected based on availability.
+
+4. **Slot Calculation**:
+    - **Time Slot Division**: Available slots are divided into manageable intervals to match the duration of the operations requested.
+
+### Summary
+
+The Garage Reservation API provides a robust mechanism for managing garage appointments, ensuring that bookings are valid, mechanics and garage boxes are properly allocated, and available slots are efficiently managed and updated. The business logic is designed to maintain high accuracy and performance in scheduling and reservation processes.

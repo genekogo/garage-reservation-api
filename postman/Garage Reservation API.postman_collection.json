@@ -1,0 +1,75 @@
+{
+	"info": {
+		"_postman_id": "944810a2-8082-41c5-b65b-aefe6f5c5810",
+		"name": "Garage Reservation API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "399571"
+	},
+	"item": [
+		{
+			"name": "Available slots",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/garage/api/v1/reservations/availableSlots?date=2024-08-30&operationIds=1,2,3",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"garage",
+						"api",
+						"v1",
+						"reservations",
+						"availableSlots"
+					],
+					"query": [
+						{
+							"key": "date",
+							"value": "2024-08-30"
+						},
+						{
+							"key": "operationIds",
+							"value": "1,2,3"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Book Appointment",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"customerId\": 1,\n    \"date\": \"2024-08-30\",\n    \"startTime\": \"08:00:00\",\n    \"endTime\": \"12:30:00\",\n    \"operationIds\": [1, 2, 3]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/garage/api/v1/reservations/book",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"garage",
+						"api",
+						"v1",
+						"reservations",
+						"book"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

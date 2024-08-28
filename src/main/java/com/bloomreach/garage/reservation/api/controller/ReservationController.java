@@ -51,7 +51,9 @@ public class ReservationController {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved available time slots",
                     content = @Content(schema = @Schema(implementation = AvailableSlot.class))),
             @ApiResponse(responseCode = "400", description = "Validation error",
-                    content = @Content(schema = @Schema(implementation = ValidationError.class)))
+                    content = @Content(schema = @Schema(implementation = ValidationError.class))),
+            @ApiResponse(responseCode = "400", description = "Processing error",
+                    content = @Content(schema = @Schema(implementation = ProcessingError.class)))
     })
     public List<AvailableSlot> findAvailableSlots(@RequestParam LocalDate date,
                                                   @RequestParam List<Long> operationIds) {

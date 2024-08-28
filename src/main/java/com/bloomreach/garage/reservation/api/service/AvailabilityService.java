@@ -45,9 +45,9 @@ public class AvailabilityService {
      * @return A list of available time slots for the given date and operations.
      * @throws ValidationError if the date is not within the allowed range.
      */
-//    @Cacheable(value = "availableSlots", key = "#date.toString() + '-' + #operationIds.toString()")
+    @Cacheable(value = "availableSlots", key = "#date.toString() + '-' + #operationIds.toString()")
     public List<AvailableSlot> findAvailableSlots(LocalDate date, List<Long> operationIds) {
-        availabilityValidator.validate(date);
+        availabilityValidator.validate(date, operationIds);
 
         List<GarageOperation> operations = garageOperationRepository.findAllById(operationIds);
         if (operations.size() != operationIds.size()) {

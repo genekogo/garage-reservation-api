@@ -2,6 +2,7 @@ package com.bloomreach.garage.reservation.api.error;
 
 public final class ErrorMessage {
 
+    public static final String OPERATION_ID_IS_REQUIRED = "Operation ID is required";
     public static final String OPERATION_NOT_FOUND = "One or more operations not found";
     public static final String DATE_CANNOT_BE_IN_THE_PAST = "Date cannot be in the past";
     public static final String DATE_CANNOT_BE_MORE_THAN = "Date cannot be more than %s days in advance";

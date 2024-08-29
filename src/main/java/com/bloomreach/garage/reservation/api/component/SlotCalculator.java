@@ -33,11 +33,7 @@ public class SlotCalculator {
         LocalTime start = workingHours.getStartTime();
         LocalTime end = workingHours.getEndTime();
 
-        // Determine the minimum operation duration or use the default duration
-//        int minDuration = operations.stream()
-//                .map(GarageOperation::getDurationInMinutes)
-//                .min(Integer::compareTo)
-//                .orElse(reservationProperties.getDefaultSlotDuration());
+        // Minimum slot duration
         int minDuration = reservationProperties.getDefaultSlotDuration();
 
         // Calculate minimum advance time
